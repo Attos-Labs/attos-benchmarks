@@ -17,7 +17,7 @@ Needs Go 1.24+. Redis is optional: if `redis-server` is on your PATH it is start
 
 ## 1. RAM to serve 1M keys (85 MB of raw key+value data)
 
-Measured after random lookups from a fresh process, including the OS page cache that each store depends on. Reference machine: shared 4-vCPU Xeon VM, using an older local snapshot of the pre-v2 Go SDK (v1 format; not a tagged release). The laptop run ([`results/linux-i5-1155G7-1M-memory.md`](results/linux-i5-1155G7-1M-memory.md)) uses the tagged attos-go v1.2.0; a run against v2 `main` is in `results/linux-i5-1155G7-1M-v2main-memory.md`. Full table: [`results/linux-4vcpu-xeon-1M-memory.md`](results/linux-4vcpu-xeon-1M-memory.md).
+Measured after random lookups from a fresh process, including the OS page cache that each store depends on. Reference machine: shared 4-vCPU Xeon VM, using an older local snapshot of the pre-v2 Go SDK (v1 format; not a tagged release). The laptop run ([`results/linux-i5-1155G7-1M-memory.md`](results/linux-i5-1155G7-1M-memory.md)) uses the tagged attos-go v1.2.0; a quiet-machine run against v2 `main` is in `results/linux-i5-1155G7-1M-v2main-quiet.md` (v1.2.0 back-to-back in `results/linux-i5-1155G7-1M-quiet.md`). Full table: [`results/linux-4vcpu-xeon-1M-memory.md`](results/linux-4vcpu-xeon-1M-memory.md).
 
 | system | RAM, one process (MB) | 4 processes on one node (MB, summed PSS) | on disk (MB) |
 |---|---|---|---|
@@ -32,7 +32,7 @@ What this shows, and what it does not:
 1. **Attos needs about its file size in RAM and no more:** about 119 B per key here, against Redis 190 B and a Go map 220-320 B. That is a saving of roughly 40% versus Redis and 45-60% versus a map, not an order of magnitude.
 2. **The saving is the file, not magic.** Attos stores keys and values uncompressed, so it is no smaller than bbolt (120 MB) and larger than Pebble's compressed files (43 MB). The index (position lookup) is a small part of the bytes; the payload dominates.
 3. **Sharing is the real win for fleets.** The file is memory-mapped, so 4 processes (or pods mounting the same file) pay for the data once: 134 MB for four against 967 MB for four map copies. Redis replicas and heap caches each hold a full private copy. Sharing only works when processes map the same file on the same node.
-4. **Resident memory drifts toward the whole file.** A random access pattern touches pages everywhere, so resident memory converges to the file size (here the default open pre-faults it immediately). Do not budget for a cold-start figure. The pages are clean and reclaimable: under memory pressure the kernel drops them and lookups slow down instead of the process being killed.
+4. **Resident memory drifts toward the whole file.** A random access pattern touches pages everywhere, so resident memory converges to the file size (on v1.2.0 the default open pre-faults it immediately; on v2 `main` the file is read on demand, so RAM at open is about 14 MB and grows to about 106 MB, and the first lookups after a cold page cache are slow: see the cold-start tables in `results/`). Do not budget for a cold-start figure. The pages are clean and reclaimable: under memory pressure the kernel drops them and lookups slow down instead of the process being killed.
 5. **Pebble can be configured to use less RAM** (a smaller block cache, which this suite does not sweep), and its files are much smaller. Attos' only RAM levers are in section 2.
 
 ## 2. Trading latency for RAM inside Attos
