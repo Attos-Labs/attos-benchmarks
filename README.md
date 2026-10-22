@@ -37,17 +37,39 @@ What this shows, and what it does not:
 
 ## 2. Trading latency for RAM inside Attos
 
-The new file format offers opt-in levers. These figures come from the maintainers' own runs on a laptop (not yet reproducible with this suite; a `-tags v2` harness will follow once the SDK with the options is tagged):
+The v2 file format has opt-in levers: LZ4 blocks of 1 to 256 records, and lean keys (a 4-byte fingerprint stored instead of the key). **They need `attos-go@main`; no tagged release contains v2 yet** (v1.2.0 does not). Measured with [`sweep/`](sweep) (its own module, so the rest of this repo still builds against the tag), 1M keys of 21 B, laptop i5-1155G7, single run, attos-go main at 3cfabed. RAM is the process after 3M random lookups (PSS, MB). Full output and machine state: [`results/linux-i5-1155G7-1M-v2main-options.md`](results/linux-i5-1155G7-1M-v2main-options.md).
 
-| 10M keys, ~35 B keys, ~150 B values (186 B raw per key) | bytes per key stored | lookup cost |
-|---|---|---|
-| Redis 7 (measured at 1M keys) | 263 | about 45,000 ns over a socket |
-| Attos v2 plain | 194 | about 70 ns hot, 470-600 ns random |
-| Attos v2 + LZ4 blocks | 166 | 2-3x slower, under 4 µs |
-| Attos v2 lean keys (4 B fingerprint instead of key) | 160 | not separately timed; absent keys falsely hit with probability 2^-32 |
-| Attos v2 lean keys + LZ4 | 142 | LZ4-class |
+Compressible values (64 hex chars, 85 B raw per key):
 
-So the dial runs from about 194 to 142 B per key (-27%), paid for in either decompression time or exactness of missing-key answers. Compare 263 B per key for Redis. Real JSON values with repeated field names usually compress better than this synthetic data.
+| mode | bytes/key | RAM PSS (MB) | hot p50 / p99 (ns) | cold p50 / p99 (ns) |
+|---|---|---|---|---|
+| plain | 91 | 100 | 78 / 112 | 267 / 710 |
+| LZ4 block 1 | 54 | 66 | 160 / 572 | 345 / 1,086 |
+| LZ4 block 4 | 45 | 58 | 228 / 732 | 440 / 1,235 |
+| LZ4 block 8 | 43 | 54 | 339 / 887 | 547 / 1,485 |
+| LZ4 block 16 | 41 | 52 | 591 / 1,459 | 728 / 1,908 |
+| lean keys | 72 | 82 | 78 / 139 | 240 / 686 |
+| lean + LZ4 block 8 | 28 | 41 | 291 / 756 | 445 / 1,193 |
+| Redis (server used_memory) | 168 | | about 15,000 over a unix socket | |
+
+Poorly compressible values (150 base64 chars of random bytes, 171 B raw per key):
+
+| mode | bytes/key | RAM PSS (MB) | hot p50 / p99 (ns) | cold p50 / p99 (ns) |
+|---|---|---|---|---|
+| plain | 177 | 182 | 73 / 107 | 262 / 764 |
+| LZ4 block 1 | 182 | 189 | 115 / 659 | 403 / 1,420 |
+| LZ4 block 4 | 174 | 179 | 201 / 723 | 495 / 1,624 |
+| LZ4 block 8 | 172 | 178 | 268 / 988 | 538 / 1,749 |
+| LZ4 block 16 | 171 | 178 | 425 / 1,422 | 671 / 1,901 |
+| lean keys | 158 | 164 | 77 / 132 | 246 / 718 |
+| lean + LZ4 block 8 | 157 | 165 | 171 / 725 | 523 / 1,730 |
+| Redis (server used_memory) | 248 | | | |
+
+What this shows:
+- LZ4 only pays when the values compress. On the hex set it saves 45-55% of the file for 3-8x the hot p50 (78 ns to 230-590 ns); on random-looking values it saves 3% or less and block size 1 makes the file larger, while still costing the latency.
+- Lean keys are close to free on latency (same hot p50) and save about 17-19 B per key here, which is the key length minus 4. The price is that a key that was never added is accepted with probability 2^-32.
+- Plain v2 on the random set is 177 B/key against Redis at 248 (-29%). Real JSON values with repeated field names usually compress better than base64 random data, but that is not measured here.
+- Earlier maintainer-measured figures (10M keys, about 35 B keys, 150 B values: 194 plain, 166 LZ4, 160 lean, 142 lean+LZ4, Redis 263) point the same way but are for longer keys and a more compressible value set, so they are not directly comparable. In particular LZ4 saved 14% there and 3% on this suite's random set. Those figures are not repeated here.
 
 ## 3. Latency (what the RAM buys)
 
