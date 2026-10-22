@@ -72,7 +72,13 @@ func main() {
 		m, err := attos.Open(p)
 		check(err)
 		disk = du(p)
-		get = func(k string) int { v, err := m.GetString(k); if err != nil { return -1 }; return len(v) }
+		get = func(k string) int {
+			v, err := m.GetString(k)
+			if err != nil {
+				return -1
+			}
+			return len(v)
+		}
 	case "map":
 		mp := make(map[string][]byte, *n)
 		for i := 0; i < *n; i++ {
@@ -118,7 +124,13 @@ func main() {
 		}
 		defer stop()
 		disk = float64(dataset.RedisMemory(cl)) / 1e6 // server memory, not a file
-		get = func(k string) int { v, err := cl.Get(ctx, k).Bytes(); if err != nil { return -1 }; return len(v) }
+		get = func(k string) int {
+			v, err := cl.Get(ctx, k).Bytes()
+			if err != nil {
+				return -1
+			}
+			return len(v)
+		}
 	default:
 		check(fmt.Errorf("unknown -sys %q", *sys))
 	}
