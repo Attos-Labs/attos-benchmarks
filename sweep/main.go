@@ -39,6 +39,8 @@ var modes = []mode{
 	{"lz4 block 16", attos.CompileOptions{Compression: attos.CompressLZ4, BlockSize: 16}},
 	{"lean keys (4 B fp)", attos.CompileOptions{FingerprintBytes: 4}},
 	{"lean + lz4 block 8", attos.CompileOptions{FingerprintBytes: 4, Compression: attos.CompressLZ4, BlockSize: 8}},
+	{"lean 8 B fp", attos.CompileOptions{FingerprintBytes: 8}},
+	{"lean 8 B fp + lz4 block 8", attos.CompileOptions{FingerprintBytes: 8, Compression: attos.CompressLZ4, BlockSize: 8}},
 }
 
 func mix(x uint64) uint64 {
