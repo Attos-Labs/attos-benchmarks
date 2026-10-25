@@ -93,6 +93,54 @@ p50 per lookup in ns, 1M keys, same VM. hot = 5,000 keys cycled (fits CPU cache)
 - Against Redis it is 70-290x faster; against bbolt 3-12x, Pebble 5-20x. Against a Go map it is **not** faster when hot.
 - p99.9 cold is 6-14 µs on this noisy VM, mostly page faults.
 
+## Results on a dedicated cloud VM
+
+Same suite re-run on a fresh, otherwise idle GCE n2-standard-4 (4 vCPU Xeon @ 2.80GHz, 16 GiB, europe-west2-a, Ubuntu 24.04, Go 1.25.6, Redis 7.0), 1M keys, 2026-10-26. Load was 0.1 at the start and the VM was deleted afterwards. It is a VM, not bare metal, and a single run; the tails here are cleaner than on the shared laptop. Raw output: [`results/gcp-n2-standard-4-1M-latency.md`](results/gcp-n2-standard-4-1M-latency.md), [`-memory`](results/gcp-n2-standard-4-1M-memory.md), [`-v2main-options`](results/gcp-n2-standard-4-1M-v2main-options.md), [`-gobench`](results/gcp-n2-standard-4-1M-gobench.md).
+
+Latency (`scripts/run_latency.sh`, attos-go v1.2.0):
+
+| | hot p50 / p99 (ns) | cold p50 / p99 (ns) |
+|---|---|---|
+| **Attos (Go)** | 85 / 171 | 299 / 702 |
+| Go map | 75 / 150 | 323 / 734 |
+| bbolt | 1,396 / 5,286 | 1,500 / 5,252 |
+| Pebble | 2,103 / 5,085 | 2,464 / 7,515 |
+| Redis (unix socket) | 23,114 / 35,884 | 23,138 / 36,052 |
+
+RAM after 3M random lookups, one process (PSS, MB): Attos 112, Go map 302, bbolt 116, Pebble 198, Redis 16 client + 169 server. Four processes sharing the same 1M keys (sum of PSS): Attos 128, Go map 987, bbolt 132.
+
+`go test -bench` means over 3 runs (ns/op, 0 allocs/op for Attos and Go map): Attos 56.7 hot / 196.6 cold, parallel 76.4; Go map 28.3 / 155.1; bbolt 1,522 / 1,670; Pebble 2,176 / 2,539; Redis 24,179 / 24,038.
+
+v2 options (attos-go main @ 3cfabed, needs `attos-go@main`; the same 8-byte fingerprint note applies). Compressible values (64 hex chars):
+
+| mode | bytes/key | RAM PSS (MB) | hot p50 / p99 (ns) |
+|---|---|---|---|
+| plain | 91 | 99 | 88 / 152 |
+| LZ4 block 1 | 54 | 65 | 185 / 585 |
+| LZ4 block 4 | 45 | 56 | 286 / 770 |
+| LZ4 block 8 | 43 | 55 | 418 / 959 |
+| LZ4 block 16 | 41 | 53 | 722 / 1,422 |
+| lean keys (4 B fp, miss 2^-32) | 72 | 81 | 93 / 126 |
+| lean 4 B + LZ4 block 8 | 28 | 40 | 341 / 743 |
+| lean keys (8 B fp, miss 2^-64) | 76 | 85 | 93 / 137 |
+| lean 8 B + LZ4 block 8 | 32 | 44 | 343 / 796 |
+| Redis (server used_memory) | 168 | | |
+
+Poorly compressible values (150 base64 chars of random bytes):
+
+| mode | bytes/key | RAM PSS (MB) | hot p50 / p99 (ns) |
+|---|---|---|---|
+| plain | 177 | 181 | 88 / 125 |
+| LZ4 block 1 | 182 | 187 | 141 / 614 |
+| LZ4 block 4 | 174 | 179 | 274 / 865 |
+| LZ4 block 8 | 172 | 178 | 376 / 912 |
+| LZ4 block 16 | 171 | 177 | 527 / 1,111 |
+| lean keys (4 B fp, miss 2^-32) | 158 | 163 | 94 / 135 |
+| lean 4 B + LZ4 block 8 | 157 | 164 | 228 / 767 |
+| lean keys (8 B fp, miss 2^-64) | 162 | 167 | 93 / 154 |
+| lean 8 B + LZ4 block 8 | 161 | 169 | 220 / 772 |
+| Redis (server used_memory) | 248 | | |
+
 ## What is measured
 
 - Keys `user:` + 16 hex (21 B), values 64 B. Correctness is checked before timing; Redis uses one GET per round trip; bbolt uses a read transaction per Get; Pebble is read-only with a 512 MB block cache.
