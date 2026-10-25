@@ -39,6 +39,8 @@ What this shows, and what it does not:
 
 The v2 file format has opt-in levers: LZ4 blocks of 1 to 256 records, and lean keys (a 4-byte fingerprint stored instead of the key). **They need `attos-go@main`; no tagged release contains v2 yet** (v1.2.0 does not). Measured with [`sweep/`](sweep) (its own module, so the rest of this repo still builds against the tag), 1M keys of 21 B, laptop i5-1155G7, single run on 2026-10-25, attos-go main at 3cfabed (p99 on this desktop is noisier than on the earlier 10-22 run). RAM is the process after 3M random lookups (PSS, MB). Full output and machine state: [`results/linux-i5-1155G7-1M-v2main-options.md`](results/linux-i5-1155G7-1M-v2main-options.md).
 
+**On Attos Cloud** the compile default is now compact 8-byte keys (`lean_keys=8`; `none` = exact keys, `4` = 4-byte fingerprints), and LZ4 is off by default and chosen at upload (attos-cloud main, commit 1aeda22). The tables below were measured on attos-go main and stay that way until a tag includes v2.
+
 Compressible values (64 hex chars, 85 B raw per key):
 
 | mode | bytes/key | RAM PSS (MB) | hot p50 / p99 (ns) | cold p50 / p99 (ns) |
