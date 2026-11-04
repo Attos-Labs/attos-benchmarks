@@ -2,18 +2,42 @@
 
 Reproducible comparisons of Attos against Redis, Pebble (RocksDB-class LSM), bbolt (B+tree) and a plain in-memory map. The question this repo answers is **how much RAM does it take to serve N keys, and what latency do you give up or gain for it.** Everything is a normal `go test -bench` run or a small Go/Rust program. Clone it, run it, and open an issue if your numbers disagree.
 
-## Run it (about 3 minutes, no account needed)
+## Run it (about 5 minutes; the only thing you supply is an API key)
 
 ```bash
 git clone https://github.com/Attos-Labs/attos-benchmarks && cd attos-benchmarks
-bash scripts/run_memory.sh 1000000                      # RAM table (Linux)
-go test -run '^$' -bench . -benchmem -benchtime 3s      # ns/op for every system
-bash scripts/run_latency.sh 1000000                     # p50 / p99 / p99.9
+export ATTOS_API_KEY=at_live_...      # dashboard: Settings > API Keys
+bash scripts/run_all.sh               # memory + latency + go bench, saved to results/run-<date>-1000000.md
 ```
 
-Needs Go 1.24+. Redis is optional: if `redis-server` is on your PATH it is started privately on a unix socket (no persistence); `ATTOS_BENCH_REDIS=host:port` uses your own instance, otherwise Redis is skipped. Dataset size: `ATTOS_BENCH_KEYS=5000000`. Rust: `make rust`. Machine details to paste with any result: `make env`.
+What happens: the suite generates the test dataset itself (no download), uploads it to Attos Cloud with your key, the cloud compiles it, and the SDK Synchronizer downloads the compiled `.attos` file, the same path a production service takes. Redis, Pebble, bbolt and a Go map are built locally from the same keys for comparison. The dataset id is cached in `.data/`, so re-runs do not use more of your monthly dataset-update quota. Delete `.data/` to start over.
 
-**SDK version:** `go.mod` pins the latest tagged `attos-go`. That release reads the v1 file format; the v2 (PTHash) format is on `main` and not yet tagged. To benchmark v2 run `go get github.com/Attos-Labs/attos-go@main` first, and always publish the SDK version next to the numbers.
+Needs Go 1.24+. Redis is optional: if `redis-server` is on your PATH it is started privately on a unix socket (no persistence); `ATTOS_BENCH_REDIS=host:port` uses your own instance; otherwise Redis is skipped. Linux is needed for the memory table (`/proc`); the latency and `go test` benchmarks run on macOS too.
+
+| Setting | Meaning |
+|---|---|
+| `ATTOS_API_KEY` | **Required.** Your project API key. |
+| `ATTOS_API_URL` | Optional. Default `https://api.attoscloud.com`; set only for a self-hosted or staging control plane. |
+| `ATTOS_BENCH_KEYS` | Optional. Dataset size, default 1,000,000 (`run_all.sh 5000000` also works). |
+| `ATTOS_BENCH_LOCAL=1` | Optional. Offline: compile with the SDK builder, no key or network. Same reader, but not the file the cloud produces. |
+
+Individual pieces: `make memory`, `make latency`, `make bench`, `make coldstart`, `make rust` (Rust SDK on the same file), `make env` (machine details to paste with any result). Your plan must allow dataset compiles through the API; a 402 or 429 error says so and what to do.
+
+**v2 storage options (LZ4, lean keys)** are SDK-level, so [`sweep/`](sweep) compiles them locally and needs no key: `cd sweep && go run . -keys 1000000` (SDK version pinned in `sweep/go.mod`).
+
+**SDK version:** `go.mod` pins the latest tagged `attos-go`. Always publish the SDK version next to your numbers.
+
+## Switching to Attos from what you use today
+
+Your data is the only thing to move. `cmd/import` uploads it with the same API key and prints the three lines of Go that replace your lookups:
+
+```bash
+go run ./cmd/import -redis localhost:6379 -match 'user:*'   # every string key in Redis
+go run ./cmd/import -file export.csv                          # key,value rows (Postgres COPY, DynamoDB export, ...)
+go run ./cmd/import -file export.ndjson                       # {"key":"..","value":".."} rows
+```
+
+Then benchmark **your own data** against your current store with the same harness: point `ATTOS_BENCH_REDIS` at your Redis for a like-for-like comparison, and compare the RAM table below with `INFO memory` from your production instance. Attos replaces read-heavy lookups (config, routing, pricing, feature data); keep Redis for data that must change per request.
 
 ## 1. RAM to serve 1M keys (85 MB of raw key+value data)
 

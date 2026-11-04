@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Attos-Labs/attos-benchmarks/internal/cloud"
 	attos "github.com/Attos-Labs/attos-go"
 	"github.com/cockroachdb/pebble"
 	"github.com/redis/go-redis/v9"
@@ -55,6 +57,11 @@ func Dir(root string, n int) string { return filepath.Join(root, fmt.Sprintf("n%
 
 func exists(p string) bool { _, err := os.Stat(p); return err == nil }
 
+// BuildAttos returns the .attos file for n keys. With ATTOS_API_KEY set (the normal path) the
+// dataset is uploaded to Attos Cloud, compiled there and downloaded with the SDK Synchronizer,
+// exactly what a production service does. The dataset id is remembered in dir so re-runs reuse
+// it and do not consume your monthly update quota. ATTOS_BENCH_LOCAL=1 compiles offline with the
+// SDK builder instead (no account; the file may differ from what the cloud produces).
 func BuildAttos(dir string, n int) (string, error) {
 	out := filepath.Join(dir, "data.attos")
 	if exists(out) {
@@ -63,10 +70,52 @@ func BuildAttos(dir string, n int) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
+	if c := cloud.FromEnv(); c != nil {
+		return buildCloud(c, dir, out, n)
+	}
+	if os.Getenv("ATTOS_BENCH_LOCAL") != "1" {
+		return "", fmt.Errorf("ATTOS_API_KEY is not set. Create a key in the Attos dashboard (Settings > API Keys) and run:\n  export ATTOS_API_KEY=at_live_...\n(offline alternative: ATTOS_BENCH_LOCAL=1)")
+	}
+	return out, buildLocal(dir, out, n)
+}
+
+func buildCloud(c *cloud.Client, dir, out string, n int) (string, error) {
+	ctx := context.Background()
+	idFile := filepath.Join(dir, "cloud_dataset_id")
+	id := ""
+	if b, err := os.ReadFile(idFile); err == nil {
+		id = strings.TrimSpace(string(b))
+	}
+	if id == "" {
+		fmt.Fprintf(os.Stderr, "attos: uploading %d keys to %s and compiling ...\n", n, c.BaseURL)
+		pr, pw := io.Pipe()
+		go func() {
+			w := bufio.NewWriterSize(pw, 1<<20)
+			for i := 0; i < n; i++ {
+				fmt.Fprintf(w, "{\"key\":%q,\"value\":%q}\n", Key(i), Value(i))
+			}
+			pw.CloseWithError(w.Flush())
+		}()
+		var err error
+		id, err = c.Upload(ctx, fmt.Sprintf("attos-benchmarks-%d", n), pr)
+		if err != nil {
+			return "", err
+		}
+		os.WriteFile(idFile, []byte(id+"\n"), 0o644)
+	}
+	fmt.Fprintf(os.Stderr, "attos: syncing dataset %s ...\n", id)
+	p, err := c.Fetch(ctx, id, dir)
+	if err != nil {
+		return "", fmt.Errorf("sync dataset %s (delete %s to upload again): %w", id, idFile, err)
+	}
+	return out, os.Rename(p, out)
+}
+
+func buildLocal(dir, out string, n int) error {
 	csv := filepath.Join(dir, "in.csv")
 	f, err := os.Create(csv)
 	if err != nil {
-		return "", err
+		return err
 	}
 	w := bufio.NewWriterSize(f, 1<<20)
 	w.WriteString("k,attos_value\n")
@@ -78,9 +127,9 @@ func BuildAttos(dir string, n int) (string, error) {
 	defer os.Remove(csv)
 	b := attos.NewBuilder()
 	if err := b.BuildFromCSV(csv); err != nil {
-		return "", err
+		return err
 	}
-	return out, b.Compile(out)
+	return b.Compile(out)
 }
 
 func BuildPebble(dir string, n int) (string, error) {
