@@ -1,0 +1,10 @@
+go: downloading github.com/PowerDNS/lmdb-go v1.9.4
+go: downloading github.com/linxGnu/grocksdb v1.11.1
+| system | mode | keys | p50 ns | p99 ns | p99.9 ns |
+|---|---|---|---|---|---|
+| lmdb | hot | 1000000 | 1239 | 2636 | 9853 |
+| lmdb | cold | 1000000 | 1376 | 2872 | 10605 |
+<!-- lmdb RSS anon 77 / file 344 MB, on disk 348 MB -->
+| rocksdb | hot | 1000000 | 2325 | 4762 | 13330 |
+| rocksdb | cold | 1000000 | 2740 | 7173 | 14662 |
+<!-- rocksdb RSS anon 138 / file 21 MB, on disk 35 MB -->

@@ -1,0 +1,72 @@
+goos: linux
+goarch: amd64
+pkg: github.com/Attos-Labs/attos-benchmarks
+cpu: Intel(R) Xeon(R) CPU @ 2.80GHz
+BenchmarkAttos/hot-4        	42067342	        57.09 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/hot-4        	41500458	        56.54 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/hot-4        	41974606	        56.67 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/hot-4        	42542312	        56.99 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/hot-4        	42508633	        57.02 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/cold-4       	12467322	       193.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/cold-4       	11996540	       197.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/cold-4       	12132553	       195.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/cold-4       	12219952	       193.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttos/cold-4       	12207278	       195.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/hot-4        	83383789	        28.64 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/hot-4        	82695754	        28.99 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/hot-4        	82133684	        28.69 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/hot-4        	82880635	        29.02 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/hot-4        	82873250	        29.47 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/cold-4       	14351031	       164.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/cold-4       	14617756	       163.3 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/cold-4       	14404671	       164.9 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/cold-4       	14615328	       165.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGoMap/cold-4       	14419460	       165.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBbolt/hot-4        	 1490148	      1618 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/hot-4        	 1435893	      1624 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/hot-4        	 1508007	      1617 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/hot-4        	 1452709	      1601 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/hot-4        	 1476760	      1627 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/cold-4       	 1399011	      1716 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/cold-4       	 1377231	      1693 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/cold-4       	 1352322	      1741 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/cold-4       	 1389816	      1741 ns/op	     695 B/op	      23 allocs/op
+BenchmarkBbolt/cold-4       	 1386423	      1732 ns/op	     695 B/op	      23 allocs/op
+2026/11/07 13:21:52 [JOB 1] WAL file .data/n1000000/pebble/000075.log with log number 000075 stopped reading at offset: 0; replayed 0 keys in 0 batches
+BenchmarkPebble/hot-4       	 1000000	      2385 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/hot-4       	 1000000	      2469 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/hot-4       	  973962	      2380 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/hot-4       	  979651	      2438 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/hot-4       	 1000000	      2440 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/cold-4      	  917952	      2792 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/cold-4      	  939962	      2760 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/cold-4      	  938700	      2801 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/cold-4      	  931172	      2783 ns/op	      88 B/op	       2 allocs/op
+BenchmarkPebble/cold-4      	  922778	      2802 ns/op	      88 B/op	       2 allocs/op
+BenchmarkRedis/hot-4        	   98947	     22853 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/hot-4        	  102968	     23162 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/hot-4        	  104154	     23075 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/hot-4        	  100246	     22716 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/hot-4        	  100395	     23094 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/cold-4       	   99814	     24775 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/cold-4       	   96913	     25094 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/cold-4       	   93360	     25162 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/cold-4       	   96164	     25138 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedis/cold-4       	   92134	     25018 ns/op	     280 B/op	       7 allocs/op
+BenchmarkRedisPipelined/hot-4         	 1417680	      1757 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/hot-4         	 1340079	      1717 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/hot-4         	 1426144	      1613 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/hot-4         	 1362589	      1732 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/hot-4         	 1396744	      1836 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/cold-4        	 1218158	      2108 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/cold-4        	 1215493	      1975 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/cold-4        	 1000000	      2093 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/cold-4        	 1201270	      2005 ns/op	     294 B/op	       4 allocs/op
+BenchmarkRedisPipelined/cold-4        	 1000000	      2169 ns/op	     294 B/op	       4 allocs/op
+BenchmarkAttosParallel-4              	28813548	        84.44 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttosParallel-4              	28090951	        85.30 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttosParallel-4              	27408252	        85.79 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttosParallel-4              	27872204	        85.63 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAttosParallel-4              	29174332	        85.19 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/Attos-Labs/attos-benchmarks	326.695s

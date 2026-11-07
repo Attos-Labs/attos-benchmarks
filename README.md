@@ -167,6 +167,64 @@ Poorly compressible values (150 base64 chars of random bytes):
 | lean 8 B + LZ4 block 8 | 161 | 169 | 220 / 772 |
 | Redis (server used_memory) | 248 | | |
 
+## Results on a dedicated cloud VM (re-run 2026-11)
+
+Same suite re-run on a fresh, otherwise idle GCE n2-standard-4 (4 vCPU Xeon @ 2.80GHz, europe-west2-a, Ubuntu 24.04, Go 1.25.6, Redis 7.0.15), 1M keys, 2026-11-07, attos-go v1.2.0 (v1 format), `ATTOS_BENCH_LOCAL=1`. The VM was deleted afterwards. Every number below is taken from the unedited files in [`results/`](results) named `gcp-n2-standard-4-1M-<name>-run<N>.txt`; environment details are in `...-env-run1.txt`. RocksDB is v11.1.1 built from source (the pinned grocksdb needs it).
+
+Latency (`scripts/run_latency.sh`), p50 / p99 in ns, runs 1 / 2 / 3:
+
+| | hot | cold |
+|---|---|---|
+| **Attos (Go)** | 87 / 191 ; 88 / 255 ; 87 / 243 | 303 / 714 ; 310 / 725 ; 299 / 706 |
+| Go map | 77 / 156 ; 77 / 166 ; 76 / 194 | 333 / 752 ; 333 / 752 ; 330 / 750 |
+| bbolt | 1458 / 5460 ; 1512 / 5617 ; 1469 / 3863 | 1542 / 5640 ; 1561 / 5575 ; 1535 / 5432 |
+| Pebble | 2306 / 5819 ; 2369 / 6792 ; 2333 / 5795 | 2666 / 8516 ; 2697 / 7878 ; 2629 / 9069 |
+| Redis (one GET per round trip, unix socket) | 22811 / 38699 ; 23238 / 39255 ; 23915 / 39226 | 24588 / 39714 ; 24811 / 39558 ; 24739 / 39306 |
+
+RAM after 3M random lookups, one process (MB, including the server for Redis), runs 1 / 2 / 3, on-disk size, and 4 processes sharing the same keys (sum of PSS, MB):
+
+| system | RAM, one process (MB) | on disk (MB) | 4 processes (sum PSS, MB) |
+|---|---|---|---|
+| attos | 120 / 120 / 120 | 99 | 132 / 138 / 139 |
+| map | 312 / 325 / 311 | 0 | 983 / 959 / 975 |
+| bbolt | 123 / 123 / 123 | 120 | 141 / 140 / 144 |
+| pebble | 158 / 158 / 157 | 43 | not measured |
+| redis | 194 / 194 / 193 | 0 | not measured |
+
+LMDB and RocksDB (`compare/`), p50 / p99 in ns, runs 1 / 2 / 3:
+
+| | hot | cold |
+|---|---|---|
+| lmdb | 1239 / 2636 ; 1244 / 2710 ; 1242 / 2706 | 1376 / 2872 ; 1378 / 2757 ; 1379 / 2658 |
+| rocksdb | 2325 / 4762 ; 2423 / 5230 ; 2298 / 4474 | 2740 / 7173 ; 2743 / 8556 ; 2777 / 8692 |
+
+Rust (`rust/`), p50 / p99 in ns, runs 1 / 2 / 3:
+
+| | hot | cold |
+|---|---|---|
+| attos (rust) | 126 / 226 ; 125 / 222 ; 125 / 268 | 374 / 821 ; 370 / 811 ; 370 / 811 |
+| std HashMap | 96 / 217 ; 96 / 195 ; 102 / 231 | 362 / 777 ; 357 / 779 ; 362 / 796 |
+
+`go test -bench` (`-benchtime 2s -count 5`), mean ns/op over 5 counts:
+
+| benchmark | ns/op |
+|---|---|
+| BenchmarkAttos/hot | 56.9 |
+| BenchmarkAttos/cold | 195.1 |
+| BenchmarkGoMap/hot | 29.0 |
+| BenchmarkGoMap/cold | 164.6 |
+| BenchmarkBbolt/hot | 1617.4 |
+| BenchmarkBbolt/cold | 1724.6 |
+| BenchmarkPebble/hot | 2422.4 |
+| BenchmarkPebble/cold | 2787.6 |
+| BenchmarkRedis/hot | 22980.0 |
+| BenchmarkRedis/cold | 25037.4 |
+| BenchmarkRedisPipelined/hot | 1731.0 |
+| BenchmarkRedisPipelined/cold | 2070.0 |
+| BenchmarkAttosParallel | 85.3 |
+
+The v2 option sweep output is in `results/gcp-n2-standard-4-1M-sweep-run1.txt`.
+
 ## What is measured
 
 - Keys `user:` + 16 hex (21 B), values 64 B. Correctness is checked before timing; Redis uses one GET per round trip; bbolt uses a read transaction per Get; Pebble is read-only with a 512 MB block cache.

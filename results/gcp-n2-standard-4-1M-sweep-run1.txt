@@ -1,0 +1,29 @@
+go: downloading github.com/Attos-Labs/attos-go v1.2.1-0.20261022132139-3cfabede76d9
+
+### values: hex (21 B key + 64 B value = 85 B raw/key, 81 MB raw for 1000000 keys)
+| mode | file MB | bytes/key | anon MB | file pages MB | PSS MB | hot p50 ns | hot p99 ns | cold p50 ns | cold p99 ns |
+|---|---|---|---|---|---|---|---|---|---|
+| plain | 87.2 | 91 | 10 | 94 | 100 | 87 | 178 | 249 | 647 |
+| lz4 block 1 | 51.8 | 54 | 12 | 58 | 67 | 183 | 693 | 368 | 946 |
+| lz4 block 4 | 42.8 | 45 | 11 | 49 | 56 | 289 | 804 | 492 | 1143 |
+| lz4 block 8 | 40.7 | 43 | 12 | 47 | 56 | 420 | 979 | 638 | 1346 |
+| lz4 block 16 | 39.4 | 41 | 12 | 46 | 53 | 726 | 1451 | 941 | 1775 |
+| lean keys (4 B fp) | 69.1 | 72 | 10 | 76 | 81 | 92 | 136 | 241 | 627 |
+| lean + lz4 block 8 | 26.3 | 28 | 11 | 33 | 40 | 337 | 809 | 508 | 1107 |
+| lean 8 B fp | 72.9 | 76 | 10 | 79 | 85 | 91 | 136 | 244 | 632 |
+| lean 8 B fp + lz4 block 8 | 30.1 | 32 | 12 | 37 | 45 | 335 | 815 | 527 | 1153 |
+| redis (used_memory, server only) | 160.6 | 168 | | | | | | | |
+
+### values: rand (21 B key + 150 B value = 171 B raw/key, 163 MB raw for 1000000 keys)
+| mode | file MB | bytes/key | anon MB | file pages MB | PSS MB | hot p50 ns | hot p99 ns | cold p50 ns | cold p99 ns |
+|---|---|---|---|---|---|---|---|---|---|
+| plain | 169.2 | 177 | 10 | 176 | 182 | 88 | 181 | 249 | 643 |
+| lz4 block 1 | 174.0 | 182 | 13 | 181 | 189 | 142 | 733 | 403 | 1053 |
+| lz4 block 4 | 165.7 | 174 | 12 | 172 | 180 | 273 | 941 | 557 | 1355 |
+| lz4 block 8 | 163.8 | 172 | 10 | 170 | 177 | 374 | 1023 | 673 | 1558 |
+| lz4 block 16 | 162.7 | 171 | 12 | 169 | 177 | 528 | 1158 | 708 | 1656 |
+| lean keys (4 B fp) | 151.1 | 158 | 10 | 158 | 164 | 92 | 134 | 248 | 638 |
+| lean + lz4 block 8 | 150.0 | 157 | 12 | 155 | 162 | 230 | 913 | 630 | 1526 |
+| lean 8 B fp | 154.9 | 162 | 10 | 161 | 168 | 91 | 137 | 242 | 631 |
+| lean 8 B fp + lz4 block 8 | 153.8 | 161 | 12 | 160 | 168 | 219 | 829 | 640 | 1541 |
+| redis (used_memory, server only) | 236.9 | 248 | | | | | | | |

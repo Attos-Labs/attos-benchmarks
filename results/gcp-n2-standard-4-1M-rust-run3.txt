@@ -1,0 +1,8 @@
+    Finished `bench` profile [optimized] target(s) in 0.06s
+     Running benches/lookup.rs (target/release/deps/lookup-9121bc7f086878b3)
+| system | mode | p50 ns | p99 ns | p99.9 ns | timer floor ns | mean ns (loop) |
+|---|---|---|---|---|---|---|
+| attos (rust) | hot | 125 | 268 | 569 | 20 | 158.4 |
+| std HashMap | hot | 102 | 231 | 510 | 20 | 137.7 |
+| attos (rust) | cold | 370 | 811 | 1250 | 20 | 425.9 |
+| std HashMap | cold | 362 | 796 | 1191 | 20 | 418.5 |

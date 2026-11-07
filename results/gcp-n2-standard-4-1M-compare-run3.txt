@@ -1,0 +1,8 @@
+| system | mode | keys | p50 ns | p99 ns | p99.9 ns |
+|---|---|---|---|---|---|
+| lmdb | hot | 1000000 | 1242 | 2706 | 9751 |
+| lmdb | cold | 1000000 | 1379 | 2658 | 9987 |
+<!-- lmdb RSS anon 37 / file 339 MB, on disk 348 MB -->
+| rocksdb | hot | 1000000 | 2298 | 4474 | 11742 |
+| rocksdb | cold | 1000000 | 2777 | 8692 | 16610 |
+<!-- rocksdb RSS anon 129 / file 19 MB, on disk 35 MB -->
