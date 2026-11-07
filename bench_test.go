@@ -16,6 +16,7 @@ import (
 
 	attos "github.com/Attos-Labs/attos-go"
 	"github.com/cockroachdb/pebble"
+	"github.com/redis/go-redis/v9"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/Attos-Labs/attos-benchmarks/internal/dataset"
@@ -166,6 +167,41 @@ func BenchmarkRedis(b *testing.B) {
 		}
 		return len(v)
 	})
+}
+
+// BenchmarkRedisPipelined is Redis' best case for batch reads: 100 GETs per round trip. The
+// reported ns/op is per key (one op = one key), so it compares directly with the other rows.
+func BenchmarkRedisPipelined(b *testing.B) {
+	cl, stop, why := dataset.Redis(dir, nKeys)
+	if cl == nil {
+		b.Skip(why)
+	}
+	defer stop()
+	ctx := context.Background()
+	const batch = 100
+	for _, hot := range []bool{true, false} {
+		name := "cold"
+		if hot {
+			name = "hot"
+		}
+		b.Run(name, func(b *testing.B) {
+			qs := queries(hot)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i += batch {
+				p := cl.Pipeline()
+				n := min(batch, b.N-i)
+				cmds := make([]*redis.StringCmd, n)
+				for j := range cmds {
+					cmds[j] = p.Get(ctx, qs[(i+j)&qmask])
+				}
+				if _, err := p.Exec(ctx); err != nil && err != redis.Nil {
+					b.Fatal(err)
+				}
+				sink += len(cmds[0].Val())
+			}
+		})
+	}
 }
 
 // BenchmarkAttosParallel measures aggregate read throughput across GOMAXPROCS goroutines.

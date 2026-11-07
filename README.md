@@ -25,6 +25,8 @@ Individual pieces: `make memory`, `make latency`, `make bench`, `make coldstart`
 
 **v2 storage options (LZ4, lean keys)** are SDK-level, so [`sweep/`](sweep) compiles them locally and needs no key: `cd sweep && go run . -keys 1000000` (SDK version pinned in `sweep/go.mod`).
 
+**More comparisons:** `BenchmarkRedisPipelined` (100 GETs per round trip, reported per key) is part of `go test -bench`. LMDB and RocksDB need a C toolchain, so they live in their own module: `cd compare && go run . -keys 1000000` (RocksDB needs a recent library: grocksdb v1.11.1 requires RocksDB 11.1.1 or newer, which means building it from source; distro packages such as Ubuntu 24.04's 8.9 do not work).
+
 **SDK version:** `go.mod` pins the latest tagged `attos-go`. Always publish the SDK version next to your numbers.
 
 ## Switching to Attos from what you use today
