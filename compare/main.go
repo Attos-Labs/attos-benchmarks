@@ -68,85 +68,77 @@ func measure(name string, hot bool, n int, qs []string, get func(string) int) {
 	fmt.Printf("| %s | %s | %d | %d | %d | %d |\n", name, mode, n, pc(.5), pc(.99), pc(.999))
 }
 
-func main() {
-	n := flag.Int("keys", 1_000_000, "keys")
-	root := flag.String("dir", ".data", "dataset cache dir")
-	ops := flag.Int("ops", 300000, "lookups per cell")
-	flag.Parse()
-	dir := dataset.Dir(*root, *n)
-	os.MkdirAll(dir, 0o755)
+type store struct {
+	name string
+	path string
+	get  func(string) int
+	done func()
+}
 
-	// LMDB
-	lp := filepath.Join(dir, "lmdb")
-	if _, err := os.Stat(lp); err != nil {
-		os.MkdirAll(lp, 0o755)
-		env, _ := lmdb.NewEnv()
-		env.SetMapSize(8 << 30)
-		env.Open(lp, 0, 0o644)
-		for s := 0; s < *n; s += 50000 {
-			e := min(s+50000, *n)
-			err := env.Update(func(tx *lmdb.Txn) error {
-				dbi, err := tx.OpenRoot(0)
-				if err != nil {
+func buildLMDB(lp string, n int) {
+	os.MkdirAll(lp, 0o755)
+	env, _ := lmdb.NewEnv()
+	env.SetMapSize(int64(n)*200 + 1<<30) // generous: 15M x ~120 B plus b-tree overhead
+	env.Open(lp, 0, 0o644)
+	for s := 0; s < n; s += 50000 {
+		e := min(s+50000, n)
+		err := env.Update(func(tx *lmdb.Txn) error {
+			dbi, err := tx.OpenRoot(0)
+			if err != nil {
+				return err
+			}
+			for i := s; i < e; i++ {
+				if err := tx.Put(dbi, []byte(dataset.Key(i)), dataset.Value(i), 0); err != nil {
 					return err
 				}
-				for i := s; i < e; i++ {
-					if err := tx.Put(dbi, []byte(dataset.Key(i)), dataset.Value(i), 0); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				panic(err)
 			}
-		}
-		env.Close()
-	}
-	// RocksDB
-	rp := filepath.Join(dir, "rocksdb")
-	if _, err := os.Stat(rp); err != nil {
-		o := grocksdb.NewDefaultOptions()
-		o.SetCreateIfMissing(true)
-		db, err := grocksdb.OpenDb(o, rp)
+			return nil
+		})
 		if err != nil {
 			panic(err)
 		}
-		wo := grocksdb.NewDefaultWriteOptions()
-		for i := 0; i < *n; i++ {
-			db.Put(wo, []byte(dataset.Key(i)), dataset.Value(i))
-		}
-		db.Flush(grocksdb.NewDefaultFlushOptions())
-		db.CompactRange(grocksdb.Range{})
-		db.Close()
 	}
+	env.Close()
+}
 
-	fmt.Println("| system | mode | keys | p50 ns | p99 ns | p99.9 ns |")
-	fmt.Println("|---|---|---|---|---|---|")
+func buildRocks(rp string, n int) {
+	o := grocksdb.NewDefaultOptions()
+	o.SetCreateIfMissing(true)
+	db, err := grocksdb.OpenDb(o, rp)
+	if err != nil {
+		panic(err)
+	}
+	wo := grocksdb.NewDefaultWriteOptions()
+	for i := 0; i < n; i++ {
+		db.Put(wo, []byte(dataset.Key(i)), dataset.Value(i))
+	}
+	db.Flush(grocksdb.NewDefaultFlushOptions())
+	db.CompactRange(grocksdb.Range{})
+	db.Close()
+}
+
+func openLMDB(lp string, n int) store {
 	env, _ := lmdb.NewEnv()
-	env.SetMapSize(8 << 30)
+	env.SetMapSize(int64(n)*200 + 1<<30)
 	if err := env.Open(lp, lmdb.Readonly, 0o644); err != nil {
 		panic(err)
 	}
 	var dbi lmdb.DBI
 	env.View(func(tx *lmdb.Txn) error { dbi, _ = tx.OpenRoot(0); return nil })
-	for _, hot := range []bool{true, false} {
-		qs := dataset.Queries(*n, *ops, hot)
-		measure("lmdb", hot, *n, qs, func(k string) int { // one read txn per Get, like the bbolt row
-			l := -1
-			env.View(func(tx *lmdb.Txn) error {
-				tx.RawRead = true
-				if v, err := tx.Get(dbi, []byte(k)); err == nil {
-					l = len(v)
-				}
-				return nil
-			})
-			return l
+	return store{"lmdb", lp, func(k string) int { // one read txn per Get, like the bbolt row
+		l := -1
+		env.View(func(tx *lmdb.Txn) error {
+			tx.RawRead = true
+			if v, err := tx.Get(dbi, []byte(k)); err == nil {
+				l = len(v)
+			}
+			return nil
 		})
-	}
-	fmt.Printf("<!-- lmdb RSS anon %.0f / file %.0f MB, on disk %.0f MB -->\n", smaps("Rss")-smaps("Pss_File"), smaps("Pss_File"), dirSize(lp))
-	env.Close()
+		return l
+	}, env.Close}
+}
 
+func openRocks(rp string) store {
 	o := grocksdb.NewDefaultOptions()
 	bo := grocksdb.NewDefaultBlockBasedTableOptions()
 	bo.SetBlockCache(grocksdb.NewLRUCache(512 << 20)) // same 512 MB budget as the Pebble row
@@ -156,18 +148,74 @@ func main() {
 		panic(err)
 	}
 	ro := grocksdb.NewDefaultReadOptions()
-	for _, hot := range []bool{true, false} {
-		qs := dataset.Queries(*n, *ops, hot)
-		measure("rocksdb", hot, *n, qs, func(k string) int {
-			v, err := db.Get(ro, []byte(k))
-			if err != nil || !v.Exists() {
-				return -1
-			}
-			l := len(v.Data())
-			v.Free()
-			return l
-		})
+	return store{"rocksdb", rp, func(k string) int {
+		v, err := db.Get(ro, []byte(k))
+		if err != nil || !v.Exists() {
+			return -1
+		}
+		l := len(v.Data())
+		v.Free()
+		return l
+	}, db.Close}
+}
+
+func main() {
+	n := flag.Int("keys", 1_000_000, "keys")
+	root := flag.String("dir", ".data", "dataset cache dir")
+	ops := flag.Int("ops", 300000, "lookups per cell")
+	sys := flag.String("sys", "all", "all|lmdb|rocksdb")
+	memLookups := flag.Int("mem-lookups", -1, ">= 0: memory mode (one store, -sys lmdb|rocksdb): do this many random lookups, print memory, exit")
+	hold := flag.Duration("hold", 0, "memory mode: stay alive this long after measuring (multi-process runs)")
+	flag.Parse()
+	dir := dataset.Dir(*root, *n)
+	os.MkdirAll(dir, 0o755)
+	lp, rp := filepath.Join(dir, "lmdb"), filepath.Join(dir, "rocksdb")
+	want := func(s string) bool { return *sys == "all" || *sys == s }
+
+	// Build (timed; skipped when the store already exists, so a rebuild needs a fresh -dir).
+	if _, err := os.Stat(lp); err != nil && want("lmdb") {
+		t := time.Now()
+		buildLMDB(lp, *n)
+		fmt.Printf("<!-- build lmdb %d keys: %.1f s, on disk %.0f MB -->\n", *n, time.Since(t).Seconds(), dirSize(lp))
 	}
-	fmt.Printf("<!-- rocksdb RSS anon %.0f / file %.0f MB, on disk %.0f MB -->\n", smaps("Rss")-smaps("Pss_File"), smaps("Pss_File"), dirSize(rp))
-	db.Close()
+	if _, err := os.Stat(rp); err != nil && want("rocksdb") {
+		t := time.Now()
+		buildRocks(rp, *n)
+		fmt.Printf("<!-- build rocksdb %d keys: %.1f s, on disk %.0f MB -->\n", *n, time.Since(t).Seconds(), dirSize(rp))
+	}
+
+	open := func(s string) store {
+		if s == "lmdb" {
+			return openLMDB(lp, *n)
+		}
+		return openRocks(rp)
+	}
+
+	if *memLookups >= 0 { // memory mode: one fresh process, like cmd/memory
+		st := open(*sys)
+		for i := 0; i < *memLookups; i++ {
+			st.get(dataset.Key(int(uint64(i) * 0x9E3779B97F4A7C15 >> 11 % uint64(*n))))
+		}
+		pss, rss := smaps("Pss"), smaps("Rss")
+		fmt.Printf("| %s | %d | %d | anon %.0f | file %.0f | pss %.0f | on-disk %.0f MB |\n", st.name, *n, *memLookups, smaps("Anonymous"), rss-smaps("Anonymous"), pss, dirSize(st.path))
+		if *hold > 0 {
+			time.Sleep(*hold)
+		}
+		st.done()
+		return
+	}
+
+	fmt.Println("| system | mode | keys | p50 ns | p99 ns | p99.9 ns |")
+	fmt.Println("|---|---|---|---|---|---|")
+	for _, name := range []string{"lmdb", "rocksdb"} {
+		if !want(name) {
+			continue
+		}
+		st := open(name)
+		for _, hot := range []bool{true, false} {
+			measure(st.name, hot, *n, dataset.Queries(*n, *ops, hot), st.get)
+		}
+		fmt.Printf("<!-- %s RSS anon %.0f / file %.0f MB, on disk %.0f MB -->\n", name, smaps("Rss")-smaps("Pss_File"), smaps("Pss_File"), dirSize(st.path))
+		st.done()
+	}
 }
