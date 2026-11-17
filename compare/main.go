@@ -72,7 +72,7 @@ type store struct {
 	name string
 	path string
 	get  func(string) int
-	done func()
+	done func() error
 }
 
 func buildLMDB(lp string, n int) {
@@ -156,7 +156,7 @@ func openRocks(rp string) store {
 		l := len(v.Data())
 		v.Free()
 		return l
-	}, db.Close}
+	}, func() error { db.Close(); return nil }}
 }
 
 func main() {
