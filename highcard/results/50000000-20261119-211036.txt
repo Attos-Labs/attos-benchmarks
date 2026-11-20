@@ -1,0 +1,58 @@
+# host
+Linux attos-highcard-bench 7.0.0-1017-gcp #19~24.04.1-Ubuntu SMP PREEMPT Thu Oct 29 22:34:06 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+model name	: Intel(R) Xeon(R) CPU @ 2.80GHz
+cores=8
+Mem:           64296        1981       61708           0        1221       62314
+# attos-go 5a76278
+go version go1.25.6 linux/amd64
+Redis server v=7.0.15 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=d064f9f48c901a92
+# run N=50000000 LOOKUPS=3000000
+RESULT kind=dataset variant=plain n=50000000 key_bytes=1200051236 val_bytes=999997877 raw_bytes=2200049113 attos_file_bytes=2520250933 compile_s=95.1 total_s=103.0
+RESULT kind=env target=attos n=50000000 go=go1.25.6 gomaxprocs=8 timer_overhead_ns=24
+RESULT kind=load target=attos cold_open_first_lookup_ms=0.111 reopen_first_lookup_ms=0.037 file_bytes=2520250933
+RESULT kind=rss target=attos phase=loaded pid=6289 vmrss_kb=12380 rss_anon_kb=1316 rss_file_kb=11080 pss_kb=12420 vmhwm_kb=19912
+RESULT kind=latency scen=quiet lookups=3000000 hits=2849661 misses=150339 bad=0 p50_ns=451 p99_ns=896 p999_ns=3389 p9999_ns=8928 max_ns=122885 mean_ns=478 wall_s=1.86 gc_cycles=1 gc_pause_total_us=24 gc_pause_max_us=24 mallocs=13
+RESULT kind=rss target=attos phase=after_quiet pid=6289 vmrss_kb=2471052 rss_anon_kb=6436 rss_file_kb=2464624 pss_kb=2471064 vmhwm_kb=2471076
+RESULT kind=latency scen=churn lookups=32565874 hits=30936874 misses=1629000 bad=0 p50_ns=418 p99_ns=872 p999_ns=3528 p9999_ns=10766 max_ns=815917 mean_ns=451 wall_s=20.00 gc_cycles=278 gc_pause_total_us=24379 gc_pause_max_us=262 mallocs=19266
+RESULT kind=rss target=attos phase=after_churn pid=6289 vmrss_kb=2476628 rss_anon_kb=11812 rss_file_kb=2464816 pss_kb=2476620 vmhwm_kb=2476848
+RESULT kind=done target=attos
+RESULT kind=dataset variant=lean4 n=50000000 key_bytes=1200051236 val_bytes=999997877 raw_bytes=2200049113 attos_file_bytes=1420199697 compile_s=92.9 total_s=99.1
+RESULT kind=env target=attos-lean4 n=50000000 go=go1.25.6 gomaxprocs=8 timer_overhead_ns=24
+RESULT kind=load target=attos-lean4 cold_open_first_lookup_ms=0.132 reopen_first_lookup_ms=0.036 file_bytes=1420199697
+RESULT kind=rss target=attos-lean4 phase=loaded pid=6304 vmrss_kb=12384 rss_anon_kb=1320 rss_file_kb=11080 pss_kb=12424 vmhwm_kb=19912
+RESULT kind=latency scen=quiet lookups=3000000 hits=2849661 misses=150339 bad=0 p50_ns=434 p99_ns=882 p999_ns=3250 p9999_ns=8296 max_ns=54434 mean_ns=466 wall_s=1.88 gc_cycles=1 gc_pause_total_us=28 gc_pause_max_us=28 mallocs=12
+RESULT kind=rss target=attos-lean4 phase=after_quiet pid=6304 vmrss_kb=1396804 rss_anon_kb=6448 rss_file_kb=1390356 pss_kb=1396800 vmhwm_kb=1396808
+RESULT kind=latency scen=churn lookups=32459459 hits=30835700 misses=1623759 bad=0 p50_ns=398 p99_ns=848 p999_ns=3114 p9999_ns=10527 max_ns=149166 mean_ns=432 wall_s=20.00 gc_cycles=278 gc_pause_total_us=23362 gc_pause_max_us=237 mallocs=19280
+RESULT kind=rss target=attos-lean4 phase=after_churn pid=6304 vmrss_kb=1405672 rss_anon_kb=15124 rss_file_kb=1390548 pss_kb=1405668 vmhwm_kb=1405684
+RESULT kind=done target=attos-lean4
+RESULT kind=dataset variant=lz4 n=50000000 key_bytes=1200051236 val_bytes=999997877 raw_bytes=2200049113 attos_file_bytes=2413993937 compile_s=84.2 total_s=90.4
+RESULT kind=env target=attos-lz4 n=50000000 go=go1.25.6 gomaxprocs=8 timer_overhead_ns=24
+RESULT kind=load target=attos-lz4 cold_open_first_lookup_ms=0.116 reopen_first_lookup_ms=0.035 file_bytes=2413993937
+RESULT kind=rss target=attos-lz4 phase=loaded pid=6324 vmrss_kb=10592 rss_anon_kb=1320 rss_file_kb=9288 pss_kb=10632 vmhwm_kb=16328
+RESULT kind=latency scen=quiet lookups=3000000 hits=2849661 misses=150339 bad=0 p50_ns=612 p99_ns=1306 p999_ns=5213 p9999_ns=17127 max_ns=174460 mean_ns=661 wall_s=2.41 gc_cycles=36 gc_pause_total_us=1729 gc_pause_max_us=129 mallocs=3000146
+RESULT kind=rss target=attos-lz4 phase=after_quiet pid=6324 vmrss_kb=2376420 rss_anon_kb=15500 rss_file_kb=2360920 pss_kb=2376412 vmhwm_kb=2376420
+RESULT kind=latency scen=churn lookups=25039501 hits=23787235 misses=1252266 bad=0 p50_ns=575 p99_ns=1297 p999_ns=6559 p9999_ns=18841 max_ns=306620 mean_ns=632 wall_s=20.00 gc_cycles=571 gc_pause_total_us=41448 gc_pause_max_us=236 mallocs=25061554
+RESULT kind=rss target=attos-lz4 phase=after_churn pid=6324 vmrss_kb=2375588 rss_anon_kb=14540 rss_file_kb=2361048 pss_kb=2375580 vmhwm_kb=2376044
+RESULT kind=done target=attos-lz4
+RESULT kind=env target=map n=50000000 go=go1.25.6 gomaxprocs=8 timer_overhead_ns=24
+RESULT kind=load target=map load_from_file_ms=26758.358 entries=50000000
+RESULT kind=rss target=map phase=loaded pid=6334 vmrss_kb=4926544 rss_anon_kb=4922992 rss_file_kb=3568 pss_kb=4926564 vmhwm_kb=4926600
+RESULT kind=latency scen=quiet lookups=3000000 hits=2849661 misses=150339 bad=0 p50_ns=597 p99_ns=1173 p999_ns=4159 p9999_ns=10706 max_ns=73311 mean_ns=638 wall_s=2.58 gc_cycles=0 gc_pause_total_us=0 gc_pause_max_us=0 mallocs=7
+RESULT kind=rss target=map phase=after_quiet pid=6334 vmrss_kb=4960720 rss_anon_kb=4957152 rss_file_kb=3568 pss_kb=4960712 vmhwm_kb=4960732
+RESULT kind=latency scen=churn lookups=22435197 hits=21313175 misses=1122022 bad=0 p50_ns=599 p99_ns=1178 p999_ns=4333 p9999_ns=9704 max_ns=136701 mean_ns=639 wall_s=20.00 gc_cycles=0 gc_pause_total_us=0 gc_pause_max_us=0 mallocs=18894
+RESULT kind=rss target=map phase=after_churn pid=6334 vmrss_kb=5061092 rss_anon_kb=5057460 rss_file_kb=3632 pss_kb=5061084 vmhwm_kb=5061092
+RESULT kind=done target=map
+RESULT kind=redis_ingest seconds=72.594786366
+RESULT kind=env target=redis n=50000000 go=go1.25.6 gomaxprocs=8 timer_overhead_ns=24
+RESULT kind=load target=redis keyspace="# Keyspace;db0:keys=50000000,expires=0,avg_ttl=0"
+RESULT kind=rss target=redis phase=loaded pid=6353 vmrss_kb=6212080 rss_anon_kb=6201516 rss_file_kb=10564 pss_kb=6205701 vmhwm_kb=6212080
+RESULT kind=redis_info used_memory=6198137912
+RESULT kind=redis_info used_memory_rss=6360662016
+RESULT kind=redis_info mem_fragmentation_ratio=1.03
+RESULT kind=latency scen=quiet lookups=200000 hits=189770 misses=10230 bad=0 p50_ns=16085 p99_ns=27850 p999_ns=38456 p9999_ns=107228 max_ns=463670 mean_ns=16646 wall_s=3.37 gc_cycles=2 gc_pause_total_us=84 gc_pause_max_us=46 mallocs=189794
+RESULT kind=rss target=redis phase=after_quiet pid=6353 vmrss_kb=6212104 rss_anon_kb=6201540 rss_file_kb=10564 pss_kb=6205725 vmhwm_kb=6212104
+RESULT kind=latency scen=churn lookups=1023409 hits=971899 misses=51510 bad=0 p50_ns=17789 p99_ns=34129 p999_ns=109581 p9999_ns=167867 max_ns=367972 mean_ns=19208 wall_s=20.00 gc_cycles=1084 gc_pause_total_us=56093 gc_pause_max_us=121 mallocs=1046105
+RESULT kind=rss target=redis phase=after_churn pid=6353 vmrss_kb=6212096 rss_anon_kb=6201532 rss_file_kb=10564 pss_kb=6205717 vmhwm_kb=6212096
+RESULT kind=done target=redis
+RESULT kind=redis_rdb bytes=2349738577
+RESULT kind=redis_restart seconds=30.591352065
