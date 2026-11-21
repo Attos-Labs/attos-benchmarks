@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Attos storage options to compare (the former sweep): VARIANTS="lean4 lean8 lz4b1 lz4b4 lz4b8 lz4b16 lean4lz4b8 lean8lz4b8"
+# STORES=1 also runs LMDB and RocksDB (build tag "stores"; needs liblmdb-dev and librocksdb-dev).
 # Usage: N=10000000 LOOKUPS=2000000 [WITH_REDIS=1] ./run.sh
 # Builds the dataset once, runs each target in a fresh process, writes results/<N>-<timestamp>.txt
 # and regenerates README.md. Redis runs only with WITH_REDIS=1 (private instance on a unix socket,
@@ -11,7 +12,8 @@ N=${N:-1000000}; LOOKUPS=${LOOKUPS:-2000000}; DIR=${DIR:-.data/n$N}
 mkdir -p "$DIR"; DIR=$(cd "$DIR" && pwd)
 OUT=results/$N-$(date +%Y%m%d-%H%M%S).txt
 mkdir -p results
-go build -o highcard .
+[ -n "${STORES:-}" ] && TAGS="-tags stores" || TAGS=""
+go build $TAGS -o highcard .
 {
   echo "# host"; uname -a; grep -m1 'model name' /proc/cpuinfo; echo "cores=$(nproc)"; free -m | sed -n 2p
   echo "# attos-go ${ATTOS_GO_REV:-$(git -C ../../sdks/attos-go rev-parse --short HEAD 2>/dev/null)}"; go version
@@ -23,6 +25,9 @@ go build -o highcard .
     [ -f "$DIR/data-$V.attos" ] || ./highcard gen -n "$N" -dir "$DIR" -variant "$V"
     ./highcard run -target attos -variant "$V" -n "$N" -dir "$DIR" -lookups "$LOOKUPS"
   done
+  if [ -n "${STORES:-}" ]; then   # needs liblmdb-dev + librocksdb-dev (cgo)
+    for S in lmdb rocksdb; do ./highcard run -target $S -n "$N" -dir "$DIR" -lookups "$LOOKUPS"; done
+  fi
   ./highcard run -target map   -n "$N" -dir "$DIR" -lookups "$LOOKUPS"
   if [ -n "${WITH_REDIS:-}" ]; then
     SOCK=$DIR/redis.sock; rm -f "$SOCK"

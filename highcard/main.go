@@ -6,7 +6,7 @@
 // Output: lines starting with "RESULT " (key=value pairs); mkreport.py turns them into BENCHMARK_RESULTS.md.
 //
 //	highcard gen    -n N -dir D            writes D/data.attos and D/kv.bin
-//	highcard run    -target attos|map|redis -n N -dir D [-addr host:port | -sock path] [-lookups M]
+//	highcard run    -target attos|map|redis|lmdb|rocksdb (lmdb, rocksdb need -tags stores) -n N -dir D [-addr host:port | -sock path] [-lookups M]
 package main
 
 import (
@@ -496,6 +496,12 @@ func run(tg, variant string, n uint64, dir string, lookups int, addr, sock strin
 		t = rc
 		info := rc.do("INFO", "keyspace")
 		fmt.Printf("RESULT kind=load target=redis keyspace=%q\n", strings.ReplaceAll(strings.TrimSpace(info), "\r\n", ";"))
+	case "lmdb", "rocksdb":
+		st, closeStore := openStore(tg, dir, n)
+		defer closeStore()
+		t = st
+		reload = lastOpen // open only; the one-time build is reported as store_build
+		fmt.Printf("RESULT kind=load target=%s open_ms=%.3f on_disk_bytes=%d\n", tg, float64(reload.Microseconds())/1000, dirBytes2(filepath.Join(dir, tg)))
 	default:
 		must(fmt.Errorf("target %q", tg), "target")
 	}
@@ -538,7 +544,7 @@ func main() {
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
 	n := fs.Uint64("n", 1_000_000, "key count")
 	dir := fs.String("dir", ".data", "dataset directory")
-	tg := fs.String("target", "attos", "attos|map|redis")
+	tg := fs.String("target", "attos", "attos|map|redis|lmdb|rocksdb")
 	lookups := fs.Int("lookups", 2_000_000, "timed lookups per scenario")
 	addr := fs.String("addr", "127.0.0.1:6399", "redis tcp address")
 	sock := fs.String("sock", "", "redis unix socket (overrides -addr)")
@@ -602,3 +608,18 @@ func redisLoad(n uint64, dir, addr, sock string) {
 	}
 	flush()
 }
+
+// dirBytes2 sums file sizes under p (plain stdlib; usable without the stores build tag).
+func dirBytes2(p string) int64 {
+	var t int64
+	filepath.Walk(p, func(_ string, i os.FileInfo, err error) error {
+		if err == nil && !i.IsDir() {
+			t += i.Size()
+		}
+		return nil
+	})
+	return t
+}
+
+// lastOpen is the time the last openStore call spent opening (not building) the store.
+var lastOpen time.Duration

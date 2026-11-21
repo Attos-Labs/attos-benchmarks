@@ -1,5 +1,7 @@
 github.com/Attos-Labs/attos-go v1.5.1-0.20261118142632-5a76278eeb6b h1:oBOH6hbfXoBE0WCi2kvbwopme6e6AM2s9nEJ1AvwvuY=
 github.com/Attos-Labs/attos-go v1.5.1-0.20261118142632-5a76278eeb6b/go.mod h1:CpcALIQUM1zTXe9TPe3iyKOeegRvxvAjBVplsgYHxnI=
+github.com/PowerDNS/lmdb-go v1.9.4 h1:dwbuaifElwgRH4otB8ATxQSOe1qmpGlaGh0gjnBwqqU=
+github.com/PowerDNS/lmdb-go v1.9.4/go.mod h1:+ZhGsv95WRaFnDSQx77ZVLRMB0gFUdX/kBUtAIOiLiU=
 github.com/aws/aws-sdk-go-v2 v1.47.0 h1:0jsHallhJCeaU0Ko48c/3FK1ctOQ7NpzggxriJOQ8MQ=
 github.com/aws/aws-sdk-go-v2 v1.47.0/go.mod h1:bttEH6JqnUL8LepvDVfdrds/fZ5bCIxzpe3abyUrhDU=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 h1:GPRlPwz40I2B2VrBEASOA3Bi77NyeqejNLkifosX0rs=
@@ -40,3 +42,9 @@ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UF
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/linxGnu/grocksdb v1.11.1 h1:/gjcsviJimrQCDDlQCVuvzmeVAvgapQKaFQkQSe48bQ=
+github.com/linxGnu/grocksdb v1.11.1/go.mod h1:WaN+XviOp90uf+bYQ0s4y6DxXedPPMb4QwIsqMd3LdU=
+github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
+github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
+go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=

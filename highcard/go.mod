@@ -2,7 +2,11 @@ module github.com/Attos-Labs/attos-benchmarks/highcard
 
 go 1.24.3
 
-require github.com/Attos-Labs/attos-go v1.5.1-0.20261118142632-5a76278eeb6b
+require (
+	github.com/Attos-Labs/attos-go v1.5.1-0.20261118142632-5a76278eeb6b
+	github.com/PowerDNS/lmdb-go v1.9.4
+	github.com/linxGnu/grocksdb v1.11.1
+)
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.0 // indirect

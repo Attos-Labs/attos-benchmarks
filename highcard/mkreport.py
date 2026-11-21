@@ -46,6 +46,8 @@ def label(t):
     if t == "attos": return "Attos (Go SDK, mmap)"
     if t == "map": return "Go `map[string]string`"
     if t == "redis": return "Redis"
+    if t == "lmdb": return "LMDB"
+    if t == "rocksdb": return "RocksDB"
     return PRETTY.get(t[6:], t)
 T = [(t, label(t)) for t in seen]
 DSV = {r.get("variant", "plain"): r for r in R if r.get("kind") == "dataset"}
@@ -70,13 +72,16 @@ for sc, nm in (("quiet", "no allocation churn"), ("churn", "with ~256 MB/s alloc
     row(f"Lookups / errors ({nm})", lambda t, sc=sc: (f"{int(LAT[(t, sc)]['lookups']):,} / {LAT[(t, sc)]['bad']}" if (t, sc) in LAT else "not run"))
 ld = one("load", target="attos"); lm = one("load", target="map")
 rs = one("redis_restart"); ri = one("redis_ingest"); rr = one("redis_rdb")
-row("On-disk size", lambda t: (mb(int(one("load", target=t)["file_bytes"])/1024) if t.startswith("attos") else ("1 file, " + mb(int(ds["raw_bytes"])/1024) + " raw (kv.bin)" if t == "map" else (mb(int(rr["bytes"])/1024) + " RDB" if rr else "n/a"))))
+row("On-disk size", lambda t: (mb(int(one("load", target=t)["file_bytes"])/1024) if t.startswith("attos") else (mb(int(one("load", target=t)["on_disk_bytes"])/1024) if t in ("lmdb", "rocksdb") else "1 file, " + mb(int(ds["raw_bytes"])/1024) + " raw (kv.bin)" if t == "map" else (mb(int(rr["bytes"])/1024) + " RDB" if rr else "n/a"))))
 def cold(t):
     if t.startswith("attos"):
         d = one("load", target=t)
         return f"open + first lookup **{d['cold_open_first_lookup_ms']} ms** (re-open while serving: {d['reopen_first_lookup_ms']} ms)" if d else "not run"
     if t == "map":
         return f"rebuild from file **{float(lm['load_from_file_ms']):,.0f} ms**"
+    if t in ("lmdb", "rocksdb"):
+        d = one("load", target=t); b = one("store_build", target=t)
+        return f"open **{float(d['open_ms']):,.1f} ms**" + (f" (one-time build {float(b['build_s']):,.0f} s)" if b else "") if d else "not run"
     if t == "redis":
         return f"restart from RDB **{float(rs['seconds'])*1000:,.0f} ms** (initial ingest {float(ri['seconds'])*1000:,.0f} ms)" if rs else "not run"
 row("Cold start / reload", cold)

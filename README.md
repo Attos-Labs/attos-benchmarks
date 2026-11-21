@@ -2,32 +2,23 @@
 
 Reproducible comparisons of Attos against Redis, Pebble (RocksDB-class LSM), bbolt (B+tree) and a plain in-memory map. The question this repo answers is **how much RAM does it take to serve N keys, and what latency do you give up or gain for it.** Everything is a normal `go test -bench` run or a small Go/Rust program. Clone it, run it, and open an issue if your numbers disagree.
 
-## Run it (about 5 minutes; the only thing you supply is an API key)
+## Run it
+
+One harness, [`highcard/`](highcard/README.md), measures Attos against a Go map and Redis (optionally LMDB and RocksDB) on the same dataset: process RSS, P50/P99/P99.9, GC behaviour and cold start. It compiles the dataset with the Go SDK builder, which is byte-identical to the Attos Cloud compiler, so no account or API key is needed.
 
 ```bash
 git clone https://github.com/Attos-Labs/attos-benchmarks && cd attos-benchmarks
-export ATTOS_API_KEY=at_live_...      # dashboard: Settings > API Keys
-bash scripts/run_all.sh               # memory + latency + go bench, saved to results/run-<date>-1000000.md
+cd highcard
+N=10000000 WITH_REDIS=1 ./run.sh                    # Attos vs Go map vs Redis, writes highcard/README.md
+VARIANTS="lean4 lean8 lz4b1 lz4b4 lz4b8 lz4b16 lean4lz4b8 lean8lz4b8" N=1000000 ./run.sh   # Attos storage options
+STORES=1 N=1000000 ./run.sh                         # also LMDB and RocksDB (cgo: liblmdb-dev, librocksdb-dev)
+cd .. && go test -run '^$' -bench . -benchmem -benchtime 3s   # ns/op and 0 allocs/op (bench_test.go)
+make rust                                           # Rust SDK on the same file
 ```
 
-What happens: the suite generates the test dataset itself (no download), uploads it to Attos Cloud with your key, the cloud compiles it, and the SDK Synchronizer downloads the compiled `.attos` file, the same path a production service takes. Redis, Pebble, bbolt and a Go map are built locally from the same keys for comparison. The dataset id is cached in `.data/`, so re-runs do not use more of your monthly dataset-update quota. Delete `.data/` to start over.
+Needs Go 1.24+, Linux for the memory numbers (`/proc`). Redis is started privately on a unix socket with no persistence. Always publish the SDK version next to your numbers (`highcard/go.mod` pins the exact attos-go commit).
 
-Needs Go 1.24+. Redis is optional: if `redis-server` is on your PATH it is started privately on a unix socket (no persistence); `ATTOS_BENCH_REDIS=host:port` uses your own instance; otherwise Redis is skipped. Linux is needed for the memory table (`/proc`); the latency and `go test` benchmarks run on macOS too.
-
-| Setting | Meaning |
-|---|---|
-| `ATTOS_API_KEY` | **Required.** Your project API key. |
-| `ATTOS_API_URL` | Optional. Default `https://api.attoscloud.com`; set only for a self-hosted or staging control plane. |
-| `ATTOS_BENCH_KEYS` | Optional. Dataset size, default 1,000,000 (`run_all.sh 5000000` also works). |
-| `ATTOS_BENCH_LOCAL=1` | Optional. Offline: compile with the SDK builder, no key or network. Same reader, but not the file the cloud produces. |
-
-Individual pieces: `make memory`, `make latency`, `make bench`, `make coldstart`, `make rust` (Rust SDK on the same file), `make env` (machine details to paste with any result). Your plan must allow dataset compiles through the API; a 402 or 429 error says so and what to do.
-
-**v2 storage options (LZ4, lean keys)** are SDK-level, so [`sweep/`](sweep) compiles them locally and needs no key: `cd sweep && go run . -keys 1000000` (SDK version pinned in `sweep/go.mod`).
-
-**More comparisons:** `BenchmarkRedisPipelined` (100 GETs per round trip, reported per key) is part of `go test -bench`. LMDB and RocksDB need a C toolchain, so they live in their own module: `cd compare && go run . -keys 1000000` (RocksDB needs a recent library: grocksdb v1.11.1 requires RocksDB 11.1.1 or newer, which means building it from source; distro packages such as Ubuntu 24.04's 8.9 do not work).
-
-**SDK version:** `go.mod` pins the latest tagged `attos-go`. Always publish the SDK version next to your numbers.
+**What was folded in:** the older `cmd/latency`, `cmd/memory`, `cmd/coldstart`, `sweep/` and `compare/` programs and their wrapper scripts are replaced by `highcard/`. The tables in sections 1 to 3 below were produced by those programs; to reproduce them exactly, `git checkout pre-consolidation`. `bench_test.go` (zero-allocation proof), `rust/` and `cmd/import` (the migration tool) are unchanged.
 
 ## Switching to Attos from what you use today
 
