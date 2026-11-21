@@ -38,8 +38,16 @@ if ds:
     print(f"- Raw payload (keys+values): **{mb(int(ds['raw_bytes'])/1024)}**; Attos file on disk: **{mb(int(ds['attos_file_bytes'])/1024)}**")
 print("- Workload: single reader goroutine/thread, uniform random keys, **95% hit / 5% miss**, every hit value verified byte-for-byte (`bad` column must be 0)")
 print("- Each target runs in a fresh process. Latency = one lookup timed with `time.Now`; Redis uses unpipelined GET over a unix socket (round trip incl. kernel).\n")
-T = [("attos", "Attos (Go SDK, mmap)"), ("attos-lean4", "Attos lean-4B*"), ("attos-lz4", "Attos LZ4*"), ("map", "Go `map[string]string`"), ("redis", "Redis")]
-T = [x for x in T if any(r.get("target") == x[0] for r in R if r.get("kind") == "env")]
+PRETTY = {"lean4": "Attos lean-4B*", "lean8": "Attos lean-8B*", "lz4": "Attos LZ4 b8*", "lz4b1": "Attos LZ4 b1*", "lz4b4": "Attos LZ4 b4*", "lz4b8": "Attos LZ4 b8*", "lz4b16": "Attos LZ4 b16*", "lean4lz4b8": "Attos lean-4B+LZ4*", "lean8lz4b8": "Attos lean-8B+LZ4*"}
+seen = []
+for r in R:
+    if r.get("kind") == "env" and r["target"] not in seen: seen.append(r["target"])
+def label(t):
+    if t == "attos": return "Attos (Go SDK, mmap)"
+    if t == "map": return "Go `map[string]string`"
+    if t == "redis": return "Redis"
+    return PRETTY.get(t[6:], t)
+T = [(t, label(t)) for t in seen]
 DSV = {r.get("variant", "plain"): r for r in R if r.get("kind") == "dataset"}
 print("## Results\n")
 print("| Metric | " + " | ".join(n for _, n in T) + " |\n|---|" + "---|" * len(T))

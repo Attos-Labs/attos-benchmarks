@@ -75,6 +75,30 @@ func must(err error, what string) {
 	}
 }
 
+// variants are the Attos v2 storage options (the former sweep/ modes): plain, LZ4 block sizes,
+// lean keys (4 or 8 B fingerprint) and lean+LZ4. "lz4" is kept as an alias of lz4b8 for old logs.
+var variants = map[string]attos.CompileOptions{
+	"plain":      {},
+	"lz4b1":      {Compression: attos.CompressLZ4, BlockSize: 1},
+	"lz4b4":      {Compression: attos.CompressLZ4, BlockSize: 4},
+	"lz4b8":      {Compression: attos.CompressLZ4, BlockSize: 8},
+	"lz4":        {Compression: attos.CompressLZ4, BlockSize: 8},
+	"lz4b16":     {Compression: attos.CompressLZ4, BlockSize: 16},
+	"lean4":      {FingerprintBytes: 4},
+	"lean4lz4b8": {FingerprintBytes: 4, Compression: attos.CompressLZ4, BlockSize: 8},
+	"lean8":      {FingerprintBytes: 8},
+	"lean8lz4b8": {FingerprintBytes: 8, Compression: attos.CompressLZ4, BlockSize: 8},
+}
+
+func variantNames() string {
+	var n []string
+	for k := range variants {
+		n = append(n, k)
+	}
+	sort.Strings(n)
+	return strings.Join(n, ",")
+}
+
 func gen(n uint64, dir, variant string) {
 	must(os.MkdirAll(dir, 0o755), "mkdir")
 	t0 := time.Now()
@@ -109,16 +133,13 @@ func gen(n uint64, dir, variant string) {
 		must(w.Flush(), "flush")
 		f.Close()
 	}
-	opts := attos.CompileOptions{}
+	opts, ok := variants[variant]
+	if !ok {
+		must(fmt.Errorf("variant %q (want one of %s)", variant, variantNames()), "variant")
+	}
 	name := "data.attos"
-	switch variant {
-	case "plain":
-	case "lean4":
-		opts.FingerprintBytes, name = 4, "data-lean4.attos"
-	case "lz4":
-		opts.Compression, opts.BlockSize, name = attos.CompressLZ4, 8, "data-lz4.attos"
-	default:
-		must(fmt.Errorf("variant %q", variant), "variant")
+	if variant != "plain" {
+		name = "data-" + variant + ".attos"
 	}
 	ap := filepath.Join(dir, name)
 	tc := time.Now()
@@ -266,9 +287,9 @@ func (t *redisT) do(args ...string) string {
 // ---- measurement ----
 
 type stats struct {
-	n                       int
+	n                          int
 	p50, p99, p999, p9999, max int64
-	mean                    float64
+	mean                       float64
 }
 
 // hist records latencies at 1 ns resolution up to 1 ms (constant memory); slower samples go to `over`.
@@ -400,7 +421,7 @@ func scenario(name string, t target, n uint64, lookups int, churn bool, pid int,
 	st := h.summarize()
 	fmt.Printf("RESULT kind=latency scen=%s lookups=%d hits=%d misses=%d bad=%d p50_ns=%d p99_ns=%d p999_ns=%d p9999_ns=%d max_ns=%d mean_ns=%.0f wall_s=%.2f gc_cycles=%d gc_pause_total_us=%d gc_pause_max_us=%d mallocs=%d%s\n",
 		name, h.n, hits, misses, bad, st.p50, st.p99, st.p999, st.p9999, st.max, st.mean, wall.Seconds(),
-		g1.num-g0.num, (g1.total-g0.total).Microseconds(), maxPause(g0, g1).Microseconds(), ms1.Mallocs-ms0.Mallocs, extra())
+		g1.num-g0.num, (g1.total - g0.total).Microseconds(), maxPause(g0, g1).Microseconds(), ms1.Mallocs-ms0.Mallocs, extra())
 }
 
 func timerOverhead() int64 {
@@ -522,7 +543,7 @@ func main() {
 	addr := fs.String("addr", "127.0.0.1:6399", "redis tcp address")
 	sock := fs.String("sock", "", "redis unix socket (overrides -addr)")
 	rpid := fs.Int("redis-pid", 0, "redis server pid (for RSS)")
-	variant := fs.String("variant", "plain", "attos file variant: plain|lean4|lz4")
+	variant := fs.String("variant", "plain", "attos file variant (see variants map): plain, lz4b1|4|8|16, lean4, lean8, lean4lz4b8, lean8lz4b8")
 	fs.Parse(os.Args[2:])
 	switch os.Args[1] {
 	case "gen":

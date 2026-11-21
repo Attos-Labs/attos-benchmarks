@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Attos storage options to compare (the former sweep): VARIANTS="lean4 lean8 lz4b1 lz4b4 lz4b8 lz4b16 lean4lz4b8 lean8lz4b8"
 # Usage: N=10000000 LOOKUPS=2000000 [WITH_REDIS=1] ./run.sh
 # Builds the dataset once, runs each target in a fresh process, writes results/<N>-<timestamp>.txt
 # and regenerates README.md. Redis runs only with WITH_REDIS=1 (private instance on a unix socket,
@@ -18,7 +19,7 @@ go build -o highcard .
   echo "# run N=$N LOOKUPS=$LOOKUPS"
   [ -f "$DIR/data.attos" ] && [ -f "$DIR/kv.bin" ] || ./highcard gen -n "$N" -dir "$DIR" -variant plain
   ./highcard run -target attos -n "$N" -dir "$DIR" -lookups "$LOOKUPS"
-  for V in ${VARIANTS-lean4 lz4}; do
+  for V in ${VARIANTS-lean4 lean8 lz4b8}; do
     [ -f "$DIR/data-$V.attos" ] || ./highcard gen -n "$N" -dir "$DIR" -variant "$V"
     ./highcard run -target attos -variant "$V" -n "$N" -dir "$DIR" -lookups "$LOOKUPS"
   done
